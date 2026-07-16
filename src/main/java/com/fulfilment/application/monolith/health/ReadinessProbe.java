@@ -2,9 +2,9 @@ package com.fulfilment.application.monolith.health;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.health.Readiness;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Readiness;
 
 @ApplicationScoped
 @Readiness
@@ -17,11 +17,10 @@ public class ReadinessProbe implements HealthCheck {
   public HealthCheckResponse call() {
     try {
       probe.checkDatabaseConnectivity();
-      return HealthCheckResponse.up("Application Ready").build();
+      probe.checkRepositoryAccess();
+      return HealthCheckResponse.up("Application Ready");
     } catch (Exception e) {
-      return HealthCheckResponse.down("Application Not Ready")
-          .withData("reason", "Database not accessible: " + e.getMessage())
-          .build();
+      return HealthCheckResponse.down("Application Not Ready - " + e.getMessage());
     }
   }
 }
