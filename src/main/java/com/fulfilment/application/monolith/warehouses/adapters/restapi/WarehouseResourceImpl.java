@@ -16,9 +16,12 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
 import java.util.List;
+import org.jboss.logging.Logger;
 
 @RequestScoped
 public class WarehouseResourceImpl implements WarehouseResource {
+
+  private static final Logger LOGGER = Logger.getLogger(WarehouseResourceImpl.class.getName());
 
   @Inject private WarehouseRepository warehouseRepository;
   @Inject private CreateWarehouseOperation createWarehouseOperation;
@@ -27,13 +30,16 @@ public class WarehouseResourceImpl implements WarehouseResource {
 
   @Override
   public List<Warehouse> listAllWarehousesUnits() {
-    return warehouseRepository.getAll().stream().map(this::toWarehouseResponse).toList();
+    LOGGER.info("Listing all warehouse units");
+    List<Warehouse> warehouses = warehouseRepository.getAll().stream().map(this::toWarehouseResponse).toList();
+    LOGGER.debug("Retrieved " + warehouses.size() + " warehouses");
+    return warehouses;
   }
 
   @Override
   @Transactional
   public Warehouse createANewWarehouseUnit(@NotNull Warehouse data) {
-    // Convert API model to domain model
+    LOGGER.info("Creating new warehouse unit with business code: " + data.getBusinessUnitCode());
     var domainWarehouse = new com.fulfilment.application.monolith.warehouses.domain.models.Warehouse();
     domainWarehouse.businessUnitCode = data.getBusinessUnitCode();
     domainWarehouse.location = data.getLocation();
@@ -41,42 +47,45 @@ public class WarehouseResourceImpl implements WarehouseResource {
     domainWarehouse.stock = data.getStock() != null ? data.getStock() : 0;
 
     try {
-      // Create warehouse through use case (includes validations)
       createWarehouseOperation.create(domainWarehouse);
-      
-      // Return the created warehouse
+      LOGGER.info("Warehouse created successfully: " + domainWarehouse.businessUnitCode);
       return toWarehouseResponse(domainWarehouse);
     } catch (IllegalArgumentException e) {
+      LOGGER.error("Failed to create warehouse", e);
       throw new WebApplicationException(e.getMessage(), 400);
     }
   }
 
   @Override
   public Warehouse getAWarehouseUnitByID(String id) {
-    // Find warehouse by business unit code
+    LOGGER.info("Fetching warehouse unit with business code: " + id);
     var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
     
     if (domainWarehouse == null) {
+      LOGGER.warn("Warehouse not found with business code: " + id);
       throw new WebApplicationException("Warehouse with business unit code '" + id + "' not found", 404);
     }
     
+    LOGGER.debug("Warehouse found: " + id);
     return toWarehouseResponse(domainWarehouse);
   }
 
   @Override
   @Transactional
   public void archiveAWarehouseUnitByID(String id) {
-    // Find warehouse by business unit code
+    LOGGER.info("Archiving warehouse unit with business code: " + id);
     var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
 
     if (domainWarehouse == null) {
+      LOGGER.warn("Cannot archive - warehouse not found with business code: " + id);
       throw new WebApplicationException("Warehouse with business unit code '" + id + "' not found", 404);
     }
 
     try {
-      // Archive warehouse through use case (includes validations)
       archiveWarehouseOperation.archive(domainWarehouse);
+      LOGGER.info("Warehouse archived successfully: " + id);
     } catch (IllegalArgumentException e) {
+      LOGGER.error("Failed to archive warehouse", e);
       throw new WebApplicationException(e.getMessage(), 400);
     }
   }
@@ -85,21 +94,20 @@ public class WarehouseResourceImpl implements WarehouseResource {
   @Transactional
   public Warehouse replaceTheCurrentActiveWarehouse(
       String businessUnitCode, @NotNull Warehouse data) {
-    // Convert API model to domain model
+    LOGGER.info("Replacing warehouse with business code: " + businessUnitCode);
     var domainWarehouse = new com.fulfilment.application.monolith.warehouses.domain.models.Warehouse();
-    domainWarehouse.businessUnitCode = businessUnitCode; // Use businessUnitCode from path
+    domainWarehouse.businessUnitCode = businessUnitCode;
     domainWarehouse.location = data.getLocation();
     domainWarehouse.capacity = data.getCapacity();
     domainWarehouse.stock = data.getStock() != null ? data.getStock() : 0;
 
     try {
-      // Replace warehouse through use case (includes validations)
       replaceWarehouseOperation.replace(domainWarehouse);
-
-      // Return the updated warehouse
       var updated = warehouseRepository.findByBusinessUnitCode(businessUnitCode);
+      LOGGER.info("Warehouse replaced successfully: " + businessUnitCode);
       return toWarehouseResponse(updated);
     } catch (IllegalArgumentException e) {
+      LOGGER.error("Failed to replace warehouse", e);
       throw new WebApplicationException(e.getMessage(), 400);
     }
   }
@@ -115,7 +123,8 @@ public class WarehouseResourceImpl implements WarehouseResource {
       @QueryParam("page") @DefaultValue("0") int page,
       @QueryParam("pageSize") @DefaultValue("10") int pageSize) {
     
-    // Validate pagination parameters
+    LOGGER.info("Searching warehouses with filters - location: " + location + ", page: " + page + ", pageSize: " + pageSize);
+    
     if (page < 0) {
       throw new WebApplicationException("Page number must be >= 0", 400);
     }
@@ -123,7 +132,6 @@ public class WarehouseResourceImpl implements WarehouseResource {
       throw new WebApplicationException("Page size must be between 1 and 100", 400);
     }
     
-    // Validate sort parameters
     if (!("createdAt".equals(sortBy) || "capacity".equals(sortBy))) {
       throw new WebApplicationException("Invalid sortBy value. Must be 'createdAt' or 'capacity'", 400);
     }
@@ -131,16 +139,15 @@ public class WarehouseResourceImpl implements WarehouseResource {
       throw new WebApplicationException("Invalid sortOrder value. Must be 'asc' or 'desc'", 400);
     }
     
-    // Get total count for pagination
     long totalItems = warehouseRepository.countWarehouses(location, minCapacity, maxCapacity);
     
-    // Get paginated results
     List<Warehouse> results = warehouseRepository
         .searchWarehouses(location, minCapacity, maxCapacity, sortBy, sortOrder, page, pageSize)
         .stream()
         .map(this::toWarehouseResponse)
         .toList();
     
+    LOGGER.debug("Search returned " + results.size() + " results out of " + totalItems + " total");
     return new WarehouseSearchResponse(results, page, pageSize, totalItems);
   }
 

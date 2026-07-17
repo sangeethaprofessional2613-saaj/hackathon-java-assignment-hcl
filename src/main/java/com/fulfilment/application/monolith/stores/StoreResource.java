@@ -43,7 +43,10 @@ public class StoreResource {
 
   @GET
   public List<Store> get() {
-    return Store.listAll(Sort.by("name"));
+    LOGGER.info("Listing all stores");
+    List<Store> stores = Store.listAll(Sort.by("name"));
+    LOGGER.debug("Retrieved " + stores.size() + " stores");
+    return stores;
   }
 
   private void fireStoreCreatedEventAfterCommit(Store store) {
@@ -85,22 +88,27 @@ public class StoreResource {
   @GET
   @Path("{id}")
   public Store getSingle(Long id) {
+    LOGGER.info("Fetching store with id: " + id);
     Store entity = Store.findById(id);
     if (entity == null) {
+      LOGGER.warn("Store not found with id: " + id);
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
+    LOGGER.debug("Store found: " + entity.name);
     return entity;
   }
 
   @POST
   @Transactional
   public Response create(Store store) {
+    LOGGER.info("Creating new store: " + store.name);
     if (store.id != null) {
       throw new WebApplicationException("Id was invalidly set on request.", 422);
     }
 
     store.persist();
     fireStoreCreatedEventAfterCommit(store);
+    LOGGER.info("Store created successfully: " + store.name);
 
     return Response.ok(store).status(201).build();
   }
@@ -109,6 +117,7 @@ public class StoreResource {
   @Path("{id}")
   @Transactional
   public Store update(Long id, Store updatedStore) {
+    LOGGER.info("Updating store with id: " + id);
     if (updatedStore.name == null) {
       throw new WebApplicationException("Store Name was not set on request.", 422);
     }
@@ -116,6 +125,7 @@ public class StoreResource {
     Store entity = Store.findById(id);
 
     if (entity == null) {
+      LOGGER.warn("Store not found for update with id: " + id);
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
 
@@ -123,6 +133,7 @@ public class StoreResource {
     entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
 
     fireStoreUpdatedEventAfterCommit(entity);
+    LOGGER.info("Store updated successfully: " + id);
 
     return entity;
   }
@@ -131,6 +142,7 @@ public class StoreResource {
   @Path("{id}")
   @Transactional
   public Store patch(Long id, Store updatedStore) {
+    LOGGER.info("Patching store with id: " + id);
     if (updatedStore.name == null) {
       throw new WebApplicationException("Store Name was not set on request.", 422);
     }
@@ -138,6 +150,7 @@ public class StoreResource {
     Store entity = Store.findById(id);
 
     if (entity == null) {
+      LOGGER.warn("Store not found for patch with id: " + id);
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
 
@@ -150,6 +163,7 @@ public class StoreResource {
     }
 
     fireStoreUpdatedEventAfterCommit(entity);
+    LOGGER.info("Store patched successfully: " + id);
 
     return entity;
   }
@@ -158,11 +172,14 @@ public class StoreResource {
   @Path("{id}")
   @Transactional
   public Response delete(Long id) {
+    LOGGER.info("Deleting store with id: " + id);
     Store entity = Store.findById(id);
     if (entity == null) {
+      LOGGER.warn("Store not found for deletion with id: " + id);
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
     entity.delete();
+    LOGGER.info("Store deleted successfully: " + id);
     return Response.status(204).build();
   }
 
