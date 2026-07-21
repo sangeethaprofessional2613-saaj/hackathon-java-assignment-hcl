@@ -14,17 +14,11 @@ open http://localhost:8080/q/swagger-ui
 # 3. Run tests
 ./mvnw test
 
-# 4. Compile and package
-./mvnw package
+# 4. Generate code coverage report
+./mvnw clean test jacoco:report
 ```
 
-## Before You Begin
-
-Read [BRIEFING.md](BRIEFING.md) for domain context, then [CODE_ASSIGNMENT.md](CODE_ASSIGNMENT.md) for your tasks.
-
----
-
-## Architecture
+## Project Overview
 
 This codebase follows **Hexagonal Architecture** (Ports & Adapters) with:
 
@@ -32,6 +26,7 @@ This codebase follows **Hexagonal Architecture** (Ports & Adapters) with:
 - CDI events for post-commit integration calls
 - OpenAPI-generated REST layer for the Warehouse API
 - Hand-coded REST endpoints for Stores and Products
+- JaCoCo code coverage reporting configured
 
 ---
 
@@ -40,8 +35,10 @@ This codebase follows **Hexagonal Architecture** (Ports & Adapters) with:
 - **Java 17+**
 - **Quarkus 3.13.3**
 - **PostgreSQL** (via Docker or Quarkus Dev Services)
+- **H2 Database** (for testing)
 - **JUnit 5** + **Testcontainers** + **Mockito**
 - **OpenAPI** (code generation for Warehouse API)
+- **JaCoCo** (code coverage with 80% target)
 
 ---
 
@@ -54,6 +51,9 @@ This codebase follows **Hexagonal Architecture** (Ports & Adapters) with:
 # Run specific test class
 ./mvnw test -Dtest=ArchiveWarehouseUseCaseTest
 
+# Generate coverage report
+./mvnw jacoco:report
+
 # Start development mode
 ./mvnw quarkus:dev
 
@@ -61,7 +61,7 @@ This codebase follows **Hexagonal Architecture** (Ports & Adapters) with:
 open http://localhost:8080/q/swagger-ui
 ```
 
-### (Optional) Run in JVM mode
+### Run in JVM mode
 
 First compile:
 
@@ -89,4 +89,10 @@ Navigate to <http://localhost:8080/index.html>
 
 ---
 
-**Good luck and have fun!** This is about demonstrating your understanding of production-grade patterns, not just writing code under pressure.
+## Code Coverage
+
+The project uses JaCoCo for code coverage reporting with a minimum target of 80% line coverage.
+
+Current coverage can be viewed at: `target/site/jacoco/index.html`
+
+**Good luck!** This is about demonstrating your understanding of production-grade patterns, not just writing code under pressure.
