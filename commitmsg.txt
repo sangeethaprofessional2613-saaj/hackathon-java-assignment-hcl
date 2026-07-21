@@ -1,3 +1,0 @@
-﻿Apply fixes: configure JaCoCo, add logging, add tests, and cleanup large dump files
-
-Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
